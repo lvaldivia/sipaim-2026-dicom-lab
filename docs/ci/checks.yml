@@ -1,0 +1,31 @@
+name: Validar notebook y aplicación
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Instalar bibliotecas de pruebas
+        run: python -m pip install -r app/requirements.txt pytest
+      - name: Descargar únicamente GE para probar HU y geometría
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/neurolabusc/dcm_qa_ct
+          git -C dcm_qa_ct sparse-checkout set In/GE
+      - name: Validar notebook sin ejecutar celdas de red
+        run: python validar_notebook.py
+      - name: Pruebas Python y sintaxis JavaScript
+        run: |
+          python -m pytest app/tests -q
+          node --check app/frontend/app.js
+      - name: Pruebas del chat en un DOM aislado
+        run: |
+          npm install --prefix app/.test-tools jsdom --no-fund --no-audit
+          node --test app/tests/chat-ui.test.cjs

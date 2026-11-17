@@ -1,0 +1,6 @@
+simulation: dicom-aws-failures
+routing: path
+mocks:
+  - name: AWS Bedrock and Polly failures
+    routeKey: aws
+    path: app/postman/mocks/aws-failure

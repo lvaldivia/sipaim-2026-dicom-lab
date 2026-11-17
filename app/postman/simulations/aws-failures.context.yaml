@@ -1,0 +1,23 @@
+purpose:
+  stands_in_for: HTTP errors from Amazon Bedrock Converse and Amazon Polly SynthesizeSpeech.
+  unblocks: Verify SDK error parsing and Spanish recoverable errors in the actual application handler.
+assumptions:
+  - id: provider-errors-remain-visible
+    status: unknown
+    claim: The handler returns HTTP 429 for Bedrock throttling and HTTP 503 for Polly unavailability, without an invented answer or audio.
+    reason: The application must not replace unavailable AI results with fabricated success.
+    verification: Postman simulation was attempted twice on 2026-11-16 but its local dataset daemon failed TLS startup before any mock began listening. A caller probe reached an unavailable localhost endpoint and the handler returned HTTP 503 without answer or audio. HTTP 429 and a real Polly 503 remain unverified through this simulation; successful production Bedrock and Polly calls are checked separately in smoke_test.py.
+    source: app/backend/handler.py; app/test_simulation.py; app/postman/mocks/aws-failure/failure.js
+    updated_at: "2026-11-16"
+  - id: provider-mock-origin
+    status: supported
+    claim: The local mock models only the two documented AWS error operations, not a full AWS service.
+    reason: Postman CLI is signed out; the maintained-mock owner search was skipped. Error shapes follow AWS API docs and botocore service models.
+    verification: Live AWS Bedrock Converse and Polly neural synthesis were separately called successfully with the authorized profile. This does not establish provider availability during failures.
+    source: app/check_aws.py; https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Converse.html; https://docs.aws.amazon.com/polly/latest/dg/API_SynthesizeSpeech.html
+    updated_at: "2026-11-16"
+fingerprints:
+  - id: implementation
+    date: "2026-11-16"
+    commit: null
+    cli: Postman 1.80.0

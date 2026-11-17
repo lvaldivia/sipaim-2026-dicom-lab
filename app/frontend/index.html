@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Explora imágenes DICOM, consulta un asistente educativo bilingüe y escucha sus explicaciones. SIPAIM 2026.">
+  <meta name="theme-color" content="#f5f6fa"><title>DICOM Lab · SIPAIM 2026</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="DICOM Lab, inicio"><span class="brand-mark"><i></i><i></i><i></i><i></i></span><b>DICOM<span>Lab</span></b></a>
+    <span class="header-separator"></span><span class="event-tag">SIPAIM 2026</span><span class="header-subtitle">Un laboratorio para explorar y comprender</span>
+    <div class="header-right"><span class="connection" id="connection"><i></i>Conectando</span><a class="notebook-link" href="/assets/SIPAIM_2026_DICOM_Python.ipynb" download>↓ Notebook</a><button class="icon-button" id="reconnect" title="Recargar los estudios" aria-label="Recargar los estudios">↻</button></div>
+  </header>
+  <div class="education-banner"><span>ⓘ</span> Herramienta educativa y de investigación. Las explicaciones generadas por IA no son un diagnóstico clínico.</div>
+  <main class="workspace">
+    <aside class="study-sidebar">
+      <div class="section-eyebrow">TU ESPACIO DE EXPLORACIÓN</div><h1>Biblioteca de estudios</h1><p class="muted intro-copy">Imágenes reales. Nuevas perspectivas.</p>
+      <div class="studies" id="studies" aria-label="Estudios disponibles"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div>
+      <button class="upload-button" id="upload-button"><span>＋</span> Importar DICOM</button><input type="file" id="upload-file" accept=".zip,application/zip" hidden>
+      <p class="upload-hint">ZIP anonimizado · CT axial regular<br>Hasta 150 MB · borrado temporal</p><div id="upload-status" class="status-message" role="status"></div>
+      <div class="metadata-card"><div class="card-title">DETALLES DEL ESTUDIO <span>↗</span></div><dl id="metadata"><dt>Selecciona un estudio</dt><dd>—</dd></dl><p id="geometry-note" class="geometry-note"></p><a id="source-link" class="source-link" target="_blank" rel="noopener noreferrer">Fuente y licencia ↗</a></div>
+      <div class="sidebar-footer"><span class="small-mark">✧</span><p>De los píxeles<br>a la comprensión.</p><span class="footer-aws">Python + AWS</span></div>
+    </aside>
+    <section class="viewer-column" aria-label="Visor de imágenes médicas">
+      <div class="viewer-heading"><div><div class="section-eyebrow">EXPLORADOR DICOM</div><h2 id="study-title">Tu siguiente descubrimiento</h2></div><span class="study-badge">CT <span>·</span> HU calibradas</span></div>
+      <div class="viewer-card">
+        <div class="viewer-toolbar"><div class="plane-tabs" role="group" aria-label="Plano anatómico"><button class="active" data-plane="axial">Axial</button><button data-plane="coronal">Coronal</button><button data-plane="sagittal">Sagital</button></div><button class="viewer-reset" id="reset-view" title="Restablecer ventana">↻ <span>Restablecer</span></button></div>
+        <div class="viewport" id="viewport"><div class="image-label"><span id="view-label">CT · AXIAL</span><span class="live-dot"></span></div><div class="image-stage" id="image-stage"><img id="dicom-image" alt="Corte DICOM seleccionado" draggable="false" hidden><span class="measure-cross" id="measure-cross" hidden></span></div><div class="viewer-loading" id="viewer-loading"><span class="spinner"></span><span>Preparando la imagen…</span></div><div class="viewport-caption"><span id="window-caption">W 1500 · L −600</span><span id="pixel-caption">Haz clic para medir HU</span></div></div>
+        <div class="slice-control"><div class="slice-label"><label for="slice">RECORRER LA SERIE</label><span><b id="slice-value">—</b><span id="slice-total"></span></span></div><input id="slice" type="range" min="0" max="193" value="97" aria-label="Índice del corte"><div class="range-ends"><span id="slice-start">1</span><span id="slice-end">194</span></div></div>
+        <div class="window-panel"><div class="window-panel-top"><h3>Ventana de visualización</h3><span>Elige qué quieres destacar</span></div><div id="presets" class="presets"></div><div class="window-sliders"><label for="level">Nivel <output id="level-value">−600 HU</output><input id="level" type="range" min="-1500" max="2000" step="10" value="-600"></label><label for="width">Ancho <output id="width-value">1500 HU</output><input id="width" type="range" min="10" max="4000" step="10" value="1500"></label></div></div>
+      </div>
+      <div class="viewer-bottom"><span>⌖ Mediciones sobre los HU originales</span><button id="download-png">↓ Guardar imagen</button></div><div class="error-banner" id="viewer-error" role="alert" hidden></div>
+    </section>
+    <aside class="assistant-panel" aria-label="Asistente educativo">
+      <div class="assistant-heading"><span class="ai-symbol">✦</span><div><h2>Una mirada más allá</h2><p>Conversa, pregunta y practica</p></div><span class="ai-chip">IA</span><button class="new-conversation" id="new-conversation" title="Nueva conversación" aria-label="Nueva conversación">↺</button></div>
+      <div class="assistant-language"><label for="text-language">Idioma de la respuesta</label><select id="text-language"><option value="es">Español</option><option value="en">English</option></select></div>
+      <div class="chat-scroll" id="chat-scroll" aria-live="polite"><div class="assistant-welcome" id="welcome"><div class="welcome-orbit">✦</div><h3>Explora con curiosidad.</h3><p>Pregunta sobre la imagen, sus metadatos o el procesamiento. La explicación se basa en el corte que estás viendo.</p><div class="suggestions"><button data-question="Explica qué permite observar esta ventana y qué información se pierde al cambiarla."><span>◐</span> Explica esta ventana <span>↗</span></button><button data-question="Resume los parámetros técnicos del estudio y explica el espaciado entre cortes."><span>▦</span> Entiende los metadatos <span>↗</span></button><button data-question="Describe de forma educativa las principales estructuras anatómicas visibles en este corte, sin hacer un diagnóstico."><span>⌕</span> Explora la anatomía <span>↗</span></button></div></div><div id="chat-messages"></div></div>
+      <div class="chat-context"><span class="context-dot"></span><span id="chat-context">Contexto: corte actual y metadatos</span><span id="queue-count" hidden></span><button id="stop-response" hidden>Detener</button></div>
+      <form class="chat-form" id="chat-form"><label class="sr-only" for="question">Pregunta al asistente</label><textarea id="question" maxlength="1500" rows="2" placeholder="¿Qué te gustaría comprender?" required></textarea><div class="composer-bottom"><span>↵ para enviar · Shift + ↵ nueva línea</span><button type="submit" id="send-question" aria-label="Enviar pregunta">↑</button></div></form>
+      <div class="audio-panel"><div class="audio-panel-top"><span>◖)) <b>Escucha la explicación</b></span><select id="audio-language" aria-label="Idioma del audio"><option value="es">Español</option><option value="en">English</option></select></div><button class="listen-button" id="listen-button" disabled>▶ Generar audio</button><audio id="audio-player" controls hidden></audio><a id="download-audio" download="explicacion-dicom.mp3" hidden>↓ Descargar MP3</a><div id="audio-status" role="status"></div></div>
+      <div class="model-footer"><span class="model-dot"></span> Amazon Bedrock · Nova Lite <span>+ Polly</span></div>
+    </aside>
+  </main>
+  <div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>

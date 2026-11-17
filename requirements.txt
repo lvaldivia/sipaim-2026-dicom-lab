@@ -1,0 +1,10 @@
+-r app/requirements.txt
+pandas>=2.2,<4
+matplotlib>=3.9,<4
+scikit-image>=0.24,<1
+scipy>=1.14,<2
+SimpleITK>=2.4,<3
+plotly>=6,<8
+ipywidgets>=8,<9
+idc-index>=0.13,<1
+pytest>=8,<10

@@ -1,0 +1,11 @@
+version: 1
+id: f807a941-caaa-48b6-ab2a-af276c297b12
+name: aws-failure
+slug: aws-failure
+protocol: http
+port: 8097
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./failure.js
+    default: true

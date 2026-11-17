@@ -1,0 +1,373 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SIPAIM DICOM Lab",
+    "version": "1.1.0",
+    "description": "API educativa de CT, Bedrock y Polly, de acceso directo sin código. No produce diagnósticos. Las credenciales AWS permanecen en el servidor. Los POST a través de CloudFront requieren x-amz-content-sha256 del JSON UTF-8 enviado."
+  },
+  "servers": [
+    {
+      "url": "https://DEPLOYMENT.cloudfront.net/api"
+    }
+  ],
+  "security": [],
+  "paths": {
+    "/health": {
+      "get": {
+        "security": [],
+        "summary": "Estado público sin información de usuarios",
+        "responses": {
+          "200": {
+            "description": "Servicio activo"
+          }
+        }
+      }
+    },
+    "/session": {
+      "post": {
+        "summary": "Compatibilidad: confirmar acceso directo sin código",
+        "responses": {
+          "200": {
+            "description": "Acceso público; code_required=false"
+          }
+        }
+      }
+    },
+    "/studies": {
+      "get": {
+        "summary": "Listar las tres series públicas",
+        "responses": {
+          "200": {
+            "description": "Metadatos técnicos y atribución; no incluye identificadores personales"
+          }
+        }
+      }
+    },
+    "/study": {
+      "get": {
+        "summary": "Consultar los metadatos de una serie",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Serie encontrada"
+          },
+          "400": {
+            "description": "Serie inválida o temporal caducada"
+          }
+        }
+      }
+    },
+    "/frame": {
+      "get": {
+        "summary": "PNG ventaneado y proporción física del plano",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/study"
+          },
+          {
+            "$ref": "#/components/parameters/plane"
+          },
+          {
+            "$ref": "#/components/parameters/index"
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": -2000,
+              "maximum": 3000
+            }
+          },
+          {
+            "name": "width",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 5000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "image contiene un data URI PNG; image_spacing usa fila,columna; physical_aspect es ancho/alto en mm"
+          },
+          "400": {
+            "description": "Plano, índice o ventana inválidos; MPR no disponible para geometría irregular"
+          }
+        }
+      }
+    },
+    "/pixel": {
+      "get": {
+        "summary": "Medir HU sobre el volumen original",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/study"
+          },
+          {
+            "$ref": "#/components/parameters/plane"
+          },
+          {
+            "$ref": "#/components/parameters/index"
+          },
+          {
+            "name": "x",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "y",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HU, coordenadas de píxel y contexto del plano; se ignora la ventana"
+          },
+          "400": {
+            "description": "Punto fuera de la imagen"
+          }
+        }
+      }
+    },
+    "/chat": {
+      "post": {
+        "summary": "Conversar sobre el corte, seguir explicaciones y practicar con preguntas",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Chat"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "answer, language, context, model y usage. Un idioma explícito en la pregunta prevalece sobre el selector. Se analiza solo el corte seleccionado."
+          },
+          "400": {
+            "description": "Pregunta, parámetros o imagen inválidos"
+          },
+          "429": {
+            "description": "Bedrock limita temporalmente las peticiones; no hay respuesta inventada"
+          },
+          "503": {
+            "description": "Proveedor no disponible; volver a intentar manualmente"
+          }
+        }
+      }
+    },
+    "/speech": {
+      "post": {
+        "summary": "Leer una respuesta con Polly; traducir si el idioma de audio difiere",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text",
+                  "language",
+                  "source_language"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4500
+                  },
+                  "language": {
+                    "type": "string",
+                    "enum": [
+                      "es",
+                      "en"
+                    ]
+                  },
+                  "source_language": {
+                    "type": "string",
+                    "enum": [
+                      "es",
+                      "en"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "audio MP3 en base64, spoken_text y language. Español usa Lupe/es-US y English Joanna/en-US; engine neural."
+          },
+          "400": {
+            "description": "Texto o idioma inválidos"
+          },
+          "503": {
+            "description": "Polly o traducción Bedrock no disponibles"
+          }
+        }
+      }
+    },
+    "/upload-url": {
+      "post": {
+        "summary": "Autorizar carga privada temporal de un ZIP de hasta 150 MB",
+        "responses": {
+          "200": {
+            "description": "key, upload.url, upload.fields; S3 presigned POST válido 600 segundos"
+          }
+        }
+      }
+    },
+    "/import": {
+      "post": {
+        "summary": "Importar una serie CT axial regular, ignorando atributos identificativos",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "key"
+                ],
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^uploads/[a-f0-9]{32}\\.zip$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Metadatos del estudio temporal imported-UUID. Se selecciona la serie con más cortes CT válidos. Caduca a las 24 h; S3 elimina objetos conforme a su ciclo de vida. El ZIP fuente se elimina al importar correctamente."
+          },
+          "400": {
+            "description": "ZIP inválido, sin CT o geometría no admitida. Límites: 150 MB comprimidos, 1000 entradas, 512 MB descomprimidos, 32 MB/instancia, matriz máxima 1024×1024, 600 cortes y 64 millones de píxeles."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "study": {
+        "name": "study",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "plane": {
+        "name": "plane",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "axial",
+            "coronal",
+            "sagittal"
+          ],
+          "default": "axial"
+        }
+      },
+      "index": {
+        "name": "index",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "description": "Índice base 0; se usa el central si se omite"
+      }
+    },
+    "schemas": {
+      "Chat": {
+        "type": "object",
+        "required": [
+          "study",
+          "question",
+          "language"
+        ],
+        "properties": {
+          "study": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 1500
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "es",
+              "en"
+            ]
+          },
+          "plane": {
+            "type": "string",
+            "enum": [
+              "axial",
+              "coronal",
+              "sagittal"
+            ]
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "level": {
+            "type": "number"
+          },
+          "width": {
+            "type": "number"
+          },
+          "history": {
+            "type": "array",
+            "maxItems": 12,
+            "items": {
+              "type": "object",
+              "properties": {
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "user",
+                    "assistant"
+                  ]
+                },
+                "text": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

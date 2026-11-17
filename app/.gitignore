@@ -1,0 +1,6 @@
+.build/
+.private/
+__pycache__/
+.pytest_cache/
+data/
+.test-tools/
