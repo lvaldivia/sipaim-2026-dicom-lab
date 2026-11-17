@@ -1,6 +1,6 @@
 # Verificación realizada
 
-La aplicación desplegada en https://dzij5ey0xgf92.cloudfront.net fue comprobada con el perfil AWS autorizado `luisvaldivia`, en CPU. Las pruebas no equivalen a una validación clínica.
+La demo de referencia en https://dzij5ey0xgf92.cloudfront.net fue comprobada en una cuenta de desarrollo, en CPU. Para reproducirla, cada participante configura su propio perfil `sipaim-lab` y comprueba su propia cuenta. Las pruebas no equivalen a una validación clínica.
 
 | Capa | Evidencia | Alcance |
 |---|---|---|
@@ -8,6 +8,7 @@ La aplicación desplegada en https://dzij5ey0xgf92.cloudfront.net fue comprobada
 | Procesamiento | Ejecución local de las celdas científicas sobre GE, Philips y LIDC-IDRI | HU, histogramas, MPR, mallas, copia DICOM y NIfTI comprobados |
 | Exportación PPT | Cinco PNG y contenido del ZIP verificados | Tres axiales/control y render a 1000 × 1000; coronal a 1000 × 1058; relaciones físicas conservadas |
 | Python | 10 pruebas de pytest | Ventana sin mutar HU, proporción y giro de MPR, geometría GE, acceso directo, medición, idiomas, historial, caducidad y espera del alumno |
+| Configuración de participantes | 12 casos adicionales, sin llamadas AWS | Perfil nuevo sipaim-lab, selección del perfil propio, error de perfil inexistente, nombres separados de stack y detección de preparación incompleta antes de crear recursos |
 | Interfaz | 1 prueba Node/jsdom con múltiples pasos | Acceso sin código, envío en cola, historial correcto, acciones, fallo de red, reintento, detener y nueva conversación |
 | Servicios desplegados | 21 controles HTTP reales desde CloudFront | Imágenes, medidas, chat multimodal, práctica de varios turnos, inglés/español, MP3 y carga/importación del fantoma |
 

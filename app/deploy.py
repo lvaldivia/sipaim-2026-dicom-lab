@@ -1,4 +1,4 @@
-"""Despliegue reproducible en AWS con el perfil luisvaldivia y permisos acotados."""
+"""Despliegue reproducible en la cuenta del participante y con permisos acotados."""
 import hashlib
 import json
 import mimetypes
@@ -10,14 +10,17 @@ from pathlib import Path
 
 import boto3
 from botocore.exceptions import ClientError
-from aws_config import crear_sesion
+from aws_config import crear_sesion, nombre_stack, validar_preparacion, REGION
 
 ROOT = Path(__file__).resolve().parent
-PROFILE, REGION, STACK = os.environ.get("AWS_PROFILE", "luisvaldivia"), "us-east-1", "sipaim-dicom-lab"
+validar_preparacion(ROOT)
+STACK = nombre_stack()
+FUNCTION = STACK + "-api"
 sesion = crear_sesion()
 s3, cfn = sesion.client("s3"), sesion.client("cloudformation")
 cuenta = sesion.client("sts").get_caller_identity()["Account"]
-bucket = f"sipaim-dicom-lab-{cuenta}-{REGION}"
+bucket = f"{STACK}-{cuenta}-{REGION}"
+print("Perfil seleccionado:", sesion.profile_name, "Cuenta de destino:", cuenta, "Región:", REGION, "Stack:", STACK, flush=True)
 try:
     s3.head_bucket(Bucket=bucket)
 except ClientError as error:
@@ -64,14 +67,14 @@ plantilla = {
  "AWSTemplateFormatVersion": "2010-09-09", "Description": "SIPAIM educational DICOM viewer, Amazon Bedrock and Polly. CPU-only; no clinical diagnosis.",
  "Resources": {
   "ApiRole": {"Type": "AWS::IAM::Role", "Properties": {"AssumeRolePolicyDocument": {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Principal": {"Service": "lambda.amazonaws.com"}, "Action": "sts:AssumeRole"}]}, "Policies": [{"PolicyName": "EducationalImaging", "PolicyDocument": {"Version": "2012-10-17", "Statement": [
-   {"Effect": "Allow", "Action": ["logs:CreateLogStream", "logs:PutLogEvents"], "Resource": f"arn:aws:logs:{REGION}:{cuenta}:log-group:/aws/lambda/sipaim-dicom-lab-api:*"},
+   {"Effect": "Allow", "Action": ["logs:CreateLogStream", "logs:PutLogEvents"], "Resource": f"arn:aws:logs:{REGION}:{cuenta}:log-group:/aws/lambda/{FUNCTION}:*"},
    {"Effect": "Allow", "Action": "s3:GetObject", "Resource": f"arn:aws:s3:::{bucket}/datasets/*"},
    {"Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], "Resource": [f"arn:aws:s3:::{bucket}/uploads/*", f"arn:aws:s3:::{bucket}/imported/*"]},
    {"Effect": "Allow", "Action": "bedrock:InvokeModel", "Resource": f"arn:aws:bedrock:{REGION}::foundation-model/amazon.nova-lite-v1:0"},
    {"Effect": "Allow", "Action": "polly:SynthesizeSpeech", "Resource": "*"}
   ]}}]}},
-  "ApiLogs": {"Type": "AWS::Logs::LogGroup", "Properties": {"LogGroupName": "/aws/lambda/sipaim-dicom-lab-api", "RetentionInDays": 7}},
-  "Api": {"Type": "AWS::Lambda::Function", "DependsOn": "ApiLogs", "Properties": {"FunctionName": "sipaim-dicom-lab-api", "Runtime": "python3.12", "Handler": "handler.handler", "Architectures": ["x86_64"], "Role": att("ApiRole", "Arn"), "MemorySize": 2048, "Timeout": 90, "ReservedConcurrentExecutions": 3, "Code": {"S3Bucket": bucket, "S3Key": clave_codigo}, "Environment": {"Variables": {"DATA_BUCKET": bucket, "BEDROCK_MODEL": "amazon.nova-lite-v1:0"}}, "Tags": [{"Key": "Project", "Value": STACK}]}},
+  "ApiLogs": {"Type": "AWS::Logs::LogGroup", "Properties": {"LogGroupName": f"/aws/lambda/{FUNCTION}", "RetentionInDays": 7}},
+  "Api": {"Type": "AWS::Lambda::Function", "DependsOn": "ApiLogs", "Properties": {"FunctionName": FUNCTION, "Runtime": "python3.12", "Handler": "handler.handler", "Architectures": ["x86_64"], "Role": att("ApiRole", "Arn"), "MemorySize": 2048, "Timeout": 90, "ReservedConcurrentExecutions": 3, "Code": {"S3Bucket": bucket, "S3Key": clave_codigo}, "Environment": {"Variables": {"DATA_BUCKET": bucket, "BEDROCK_MODEL": "amazon.nova-lite-v1:0"}}, "Tags": [{"Key": "Project", "Value": STACK}]}},
   "ApiUrl": {"Type": "AWS::Lambda::Url", "Properties": {"TargetFunctionArn": ref("Api"), "AuthType": "AWS_IAM", "InvokeMode": "BUFFERED"}},
   "ApiOac": {"Type": "AWS::CloudFront::OriginAccessControl", "Properties": {"OriginAccessControlConfig": {"Name": STACK + "-api", "OriginAccessControlOriginType": "lambda", "SigningBehavior": "always", "SigningProtocol": "sigv4"}}},
   "SiteOac": {"Type": "AWS::CloudFront::OriginAccessControl", "Properties": {"OriginAccessControlConfig": {"Name": STACK + "-site", "OriginAccessControlOriginType": "s3", "SigningBehavior": "always", "SigningProtocol": "sigv4"}}},
@@ -121,6 +124,7 @@ if estado not in ("CREATE_COMPLETE", "UPDATE_COMPLETE"):
             print(evento["LogicalResourceId"], evento.get("ResourceStatusReason"), flush=True)
     raise SystemExit("El despliegue no se completó.")
 outputs = {o["OutputKey"]: o["OutputValue"] for o in stack["Outputs"]}
+outputs.update({"StackName": STACK, "Region": REGION})
 (ROOT / "deployment.json").write_text(json.dumps(outputs, indent=2), encoding="utf-8")
 s3.put_bucket_cors(Bucket=bucket, CORSConfiguration={"CORSRules": [{"AllowedOrigins": [outputs["Url"]], "AllowedMethods": ["POST"], "AllowedHeaders": ["*"], "MaxAgeSeconds": 600}]})
 sesion.client("cloudfront").create_invalidation(DistributionId=outputs["DistributionId"], InvalidationBatch={"Paths": {"Quantity": 1, "Items": ["/*"]}, "CallerReference": str(time.time_ns())})

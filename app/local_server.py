@@ -8,14 +8,14 @@ from urllib.parse import parse_qs, urlsplit
 
 import boto3
 import numpy as np
-from aws_config import crear_sesion
+from aws_config import crear_sesion, nombre_stack, REGION
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "backend"))
 import handler as api
 session = crear_sesion()
 deployment = ROOT / "deployment.json"
-api.BUCKET = os.environ.get("DATA_BUCKET") or (json.loads(deployment.read_text())["Bucket"] if deployment.exists() else f"sipaim-dicom-lab-{session.client('sts').get_caller_identity()['Account']}-us-east-1")
+api.BUCKET = os.environ.get("DATA_BUCKET") or (json.loads(deployment.read_text())["Bucket"] if deployment.exists() else f"{nombre_stack()}-{session.client('sts').get_caller_identity()['Account']}-{REGION}")
 api._clientes.update({name: session.client(name) for name in ["s3", "bedrock-runtime", "polly"]})
 api_original = api.cargar_estudio
 

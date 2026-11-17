@@ -40,7 +40,7 @@ La interfaz y la API de la demo son públicas por solicitud del propietario; los
 
 ## Actualizar y retirar
 
-`app/deploy.py` genera el template CloudFormation, empaqueta Lambda, sube assets y datos públicos e invalida CloudFront. El nombre del stack es `sipaim-dicom-lab`. El bucket se crea como recurso de preparación fuera del stack; no se vacía ni elimina al borrar el stack.
+`app/deploy.py` genera el template CloudFormation, empaqueta Lambda, sube assets y datos públicos e invalida CloudFront. Cada participante selecciona su propio perfil `sipaim-lab` mediante `AWS_PROFILE` y un nombre de stack mediante `AWS_STACK_NAME`, por ejemplo `sipaim-lab-ana`. Si no define este último, el nombre es `sipaim-dicom-lab`. Lambda, logs y políticas derivan del stack; el bucket combina stack, cuenta y región. El bucket se crea como recurso de preparación fuera del stack; no se vacía ni elimina al borrar el stack.
 
 Para retirar el proyecto, revise sus recursos en `app/deployment.json`, elimine el stack y espere su eliminación, después vacíe y elimine únicamente el bucket identificado como perteneciente a este proyecto. Conservar el notebook y el repositorio no mantiene activos Bedrock o Polly: se facturan invocaciones, no por estar documentados.
 

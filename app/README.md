@@ -1,8 +1,8 @@
 # DICOM Lab · SIPAIM 2026
 
-Aplicación educativa desplegada con el perfil **luisvaldivia**, región **us-east-1**.
+Aplicación educativa para desplegar en la cuenta de cada participante. Los ejemplos usan un perfil propio llamado **`sipaim-lab`** y región **`us-east-1`**. Sigue primero las instrucciones completas del [README principal](../README.md).
 
-**URL:** https://dzij5ey0xgf92.cloudfront.net
+**Demo de referencia:** https://dzij5ey0xgf92.cloudfront.net. Tu despliegue tendrá otra URL, guardada en `app/deployment.json`.
 
 La aplicación abre directamente, sin código de acceso ni pantalla de inicio de sesión. Las credenciales AWS permanecen en el backend. La URL de origen Lambda continúa protegida mediante AWS_IAM y CloudFront OAC; el acceso público al laboratorio se realiza a través de CloudFront.
 
@@ -31,17 +31,20 @@ El despliegue genera cargos por uso de Bedrock, Polly, Lambda, CloudFront, regis
 
 ## Reproducir y actualizar
 
-Desde la carpeta DICOM y el entorno `.venv`:
+Desde la raíz de tu clon, con `.venv` activo, tu perfil creado y un stack que identifique tu práctica:
 
 ```powershell
+$env:AWS_PROFILE = "sipaim-lab"
+$env:AWS_STACK_NAME = "sipaim-lab-ana"
+aws sts get-caller-identity --profile sipaim-lab
 .\.venv\Scripts\python app/prepare_data.py
 .\.venv\Scripts\python -m pip install --target app/.build/package --platform manylinux_2_28_x86_64 --platform manylinux2014_x86_64 --python-version 3.12 --implementation cp --only-binary :all: --no-compile numpy pydicom Pillow
 .\.venv\Scripts\python app/deploy.py
 ```
 
-`deploy.py` usa el perfil autorizado, publica archivos y aplica `cloudformation.json` al stack **sipaim-dicom-lab**. El bucket del proyecto se gestiona fuera del stack y contiene el paquete Lambda, frontend y series; no se modifica ningún recurso de otros proyectos. Las salidas públicas se guardan en `deployment.json`. No añada `.private/`, `.build/`, `.test-tools/` ni `data/` al repositorio.
+Sustituye `ana` por tu alias. `deploy.py` usa `AWS_PROFILE` (por defecto `sipaim-lab`) y `AWS_STACK_NAME` (por defecto `sipaim-dicom-lab`). Los nombres de Lambda, logs, bucket y políticas derivan del stack seleccionado; el bucket incluye también tu cuenta y la región. Comprueba STS antes de continuar. El bucket se gestiona fuera del stack y contiene el paquete Lambda, frontend y series. Las salidas de tu despliegue se guardan en `deployment.json`; no copies las de otra persona. No añadas `.private/`, `.build/`, `.test-tools/` ni `data/` al repositorio.
 
-Para detener los recursos del proyecto, elimine el stack `sipaim-dicom-lab` en CloudFormation y, cuando termine, vacíe y elimine únicamente el bucket indicado en `deployment.json`. No se ha ejecutado esa eliminación.
+Para retirar tu copia, consulta `StackName` y `Bucket` en tu `deployment.json`, verifica tu cuenta, elimina ese stack y, cuando termine, vacía y elimina únicamente su bucket si ya no necesitas los datos. No elimines recursos de otros participantes.
 
 ## Verificación
 
@@ -52,7 +55,7 @@ node --test app/tests/chat-ui.test.cjs
 .\.venv\Scripts\python app/smoke_test.py
 ```
 
-Las diez pruebas Python verifican calibración/ventaneo, geometría MPR, bloqueo de GE inclinado, acceso directo, mediciones, seis parejas de historial, espera de la respuesta del alumno sin inventar turnos y rechazo de consultas sobre importaciones caducadas. La prueba de interfaz usa un DOM aislado con jsdom (dependencia solo de desarrollo en `.test-tools/`) para comprobar envío consecutivo, cola, contexto del siguiente turno, acciones de seguimiento, recuperación de errores y cancelación. No controla un navegador real. La prueba de integración hace **21 controles reales contra la URL de CloudFront**, incluyendo una conversación de práctica con seguimiento, Bedrock con imagen en español/inglés, MP3 en ambos idiomas, traducción para audio y carga/importación de seis cortes del fantoma público. Los resultados están en `.build/smoke-result.json`; los MP3 de prueba no se publican.
+Las diez pruebas del backend verifican calibración/ventaneo, geometría MPR, bloqueo de GE inclinado, acceso directo, mediciones, historial, espera del alumno y caducidad. Otras doce comprueban perfiles y preparación del laboratorio sin consultar AWS. La prueba de interfaz usa un DOM aislado con jsdom (dependencia solo de desarrollo en `.test-tools/`) para comprobar envío consecutivo, cola, contexto del siguiente turno, acciones de seguimiento, recuperación de errores y cancelación. No controla un navegador real. La prueba de integración hace **21 controles reales contra la URL de CloudFront**, incluyendo una conversación de práctica con seguimiento, Bedrock con imagen en español/inglés, MP3 en ambos idiomas, traducción para audio y carga/importación de seis cortes del fantoma público. Los resultados están en `.build/smoke-result.json`; los MP3 de prueba no se publican.
 
 La simulación local de errores de proveedores está en `postman/simulations/`. El CLI de Postman no pudo iniciar su daemon local por un fallo TLS; no se afirma que esa simulación haya pasado. Su contexto documenta la limitación. Las llamadas reales de éxito sí fueron comprobadas. El control de Google Chrome fue rechazado por permisos del entorno: queda pendiente la revisión visual y de reproducción interactiva en navegador.
 
